@@ -9,6 +9,8 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { TypewriterText } from "@/components/shared/TypewriterText";
 
 export default function DashboardPage() {
   const { toast } = useToast();
@@ -19,6 +21,7 @@ export default function DashboardPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedCommitIds, setSelectedCommitIds] = useState<string[]>([]);
   const [report, setReport] = useState<Report | null>(null);
+  const [showSubtitle, setShowSubtitle] = useState(false);
 
   const { mutate: generateReport, isPending: isGenerating } = useMutation<
     Report,
@@ -153,17 +156,30 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="max-w-4xl mx-auto px-6 py-12">
         <header className="mb-12 text-center space-y-4">
           <div className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4">
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
-            WhatIDid
+            <TypewriterText
+              text="WhatIDid"
+              speed={80}
+              onComplete={() => setShowSubtitle(true)}
+            />
           </h1>
-          <p className="text-xl text-muted-foreground max-w-lg mx-auto">
-            Transforme seu histórico do Git em relatórios profissionais em
-            segundos.
+          <p className="text-xl max-w-lg mx-auto h-7">
+            <span className="text-muted-foreground/90">
+              {showSubtitle && (
+                <TypewriterText
+                  text="Transforme seu histórico do Git em relatórios profissionais em segundos."
+                  speed={40}
+                />
+              )}
+            </span>
           </p>
         </header>
 
