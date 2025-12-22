@@ -4,7 +4,12 @@
   "private": true,
   "scripts": {
     "start:backend": "pnpm --dir Backend start:dev",
-    "start:frontend": "echo 'Frontend project not initialized yet.'",
-    "dev": "pnpm run start:backend & pnpm run start:frontend"
+    "start:frontend": "pnpm --dir Frontend dev",
+    "dev": "concurrently \"pnpm:start:backend\" \"pnpm:start:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\"",
+    "build": "pnpm --dir Backend build && pnpm --dir Frontend build",
+    "start:prod": "pnpm --dir Backend start:prod"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
