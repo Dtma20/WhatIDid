@@ -1,0 +1,10 @@
+{
+  "name": "what-i-did-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:backend": "pnpm --dir Backend start:dev",
+    "start:frontend": "echo 'Frontend project not initialized yet.'",
+    "dev": "pnpm run start:backend & pnpm run start:frontend"
+  }
+}
