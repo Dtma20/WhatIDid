@@ -12,7 +12,6 @@ export function UserMenu() {
     const [user, setUser] = useState<AuthUser | null>(null);
 
     useEffect(() => {
-        // Buscar dados do usuário da API
         const fetchUser = async () => {
             try {
                 const response = await fetch(

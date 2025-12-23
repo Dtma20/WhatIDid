@@ -34,9 +34,11 @@ export const authService = {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
 
-  getLoginUrl(): string {
+  getLoginUrl(includePrivate: boolean = true): string {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${baseUrl}/auth/github`;
+    return includePrivate
+      ? `${baseUrl}/auth/github`
+      : `${baseUrl}/auth/github/public`;
   },
 
   logout(): void {

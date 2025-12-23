@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { GithubAuthGuard } from './guards/github-auth.guard';
+import { GithubPublicAuthGuard } from './guards/github-public-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { User } from './entities/user.entity';
@@ -20,19 +21,28 @@ export class AuthController {
     @Get('github')
     @UseGuards(GithubAuthGuard)
     async githubLogin() {
-        // Guard redirects to GitHub
-        this.logger.log('Initiating GitHub OAuth login');
+        this.logger.log('Initiating GitHub OAuth login (full access)');
+    }
+
+    @Public()
+    @Get('github/public')
+    @UseGuards(GithubPublicAuthGuard)
+    async githubLoginPublic() {
+        this.logger.log('Initiating GitHub OAuth login (public only)');
     }
 
     @Public()
     @Get('github/callback')
     @UseGuards(GithubAuthGuard)
     async githubCallback(@Req() req: any, @Res() res: Response) {
+        return this.handleCallback(req, res);
+    }
+
+    private async handleCallback(req: any, res: Response) {
         this.logger.log(`GitHub callback received for user: ${req.user?.username}`);
 
         const result = await this.authService.login(req.user);
 
-        // Redirect to frontend with token
         const frontendUrl = this.configService.get<string>(
             'auth.frontendUrl',
             'http://localhost:5173',
@@ -41,7 +51,6 @@ export class AuthController {
         const redirectUrl = new URL('/auth/callback', frontendUrl);
         redirectUrl.searchParams.set('token', result.accessToken);
 
-        this.logger.log(`Redirecting to frontend: ${redirectUrl.origin}/auth/callback`);
         return res.redirect(redirectUrl.toString());
     }
 

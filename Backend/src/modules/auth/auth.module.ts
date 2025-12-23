@@ -6,6 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GithubStrategy } from './strategies/github.strategy';
+import { GithubPublicStrategy } from './strategies/github-public.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { EncryptionService } from './services/encryption.service';
@@ -30,6 +31,7 @@ import { UserService } from './services/user.service';
         EncryptionService,
         UserService,
         GithubStrategy,
+        GithubPublicStrategy,
         JwtStrategy,
         {
             provide: APP_GUARD,

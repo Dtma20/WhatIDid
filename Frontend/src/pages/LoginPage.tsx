@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Github, Sparkles } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Github, Sparkles, Lock, Globe } from 'lucide-react';
 import { authService } from '@/services/auth';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 export default function LoginPage() {
+  const [includePrivate, setIncludePrivate] = useState(true);
+
   const handleLogin = () => {
-    window.location.href = authService.getLoginUrl();
+    window.location.href = authService.getLoginUrl(includePrivate);
   };
 
   return (
@@ -31,6 +35,31 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-4">
+            <div
+              className="flex items-center justify-center gap-3 p-4 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setIncludePrivate(!includePrivate)}
+            >
+              <Checkbox
+                id="private-repos"
+                checked={includePrivate}
+                onCheckedChange={(checked) => setIncludePrivate(checked === true)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <label htmlFor="private-repos" className="flex items-center gap-2 text-sm cursor-pointer">
+                {includePrivate ? (
+                  <>
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <span>Incluir repositórios privados</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span>Apenas repositórios públicos</span>
+                  </>
+                )}
+              </label>
+            </div>
+
             <Button
               size="lg"
               onClick={handleLogin}
@@ -41,7 +70,10 @@ export default function LoginPage() {
             </Button>
 
             <p className="text-xs text-muted-foreground">
-              Ao entrar, você autoriza o acesso aos seus repositórios públicos e privados.
+              {includePrivate
+                ? "Você terá acesso a todos os seus repositórios, incluindo os privados."
+                : "Você terá acesso apenas aos seus repositórios públicos."
+              }
             </p>
           </div>
         </div>

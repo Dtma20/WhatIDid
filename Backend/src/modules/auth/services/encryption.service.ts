@@ -10,7 +10,6 @@ export class EncryptionService {
 
     constructor(private readonly configService: ConfigService) {
         const secret = this.configService.getOrThrow<string>('auth.encryptionKey');
-        // Derive a 32-byte key from the secret using scrypt
         this.key = scryptSync(secret, 'salt', 32);
     }
 
@@ -23,8 +22,6 @@ export class EncryptionService {
             encrypted += cipher.final('hex');
 
             const authTag = cipher.getAuthTag();
-
-            // Format: iv:authTag:encryptedData
             return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
         } catch (error) {
             this.logger.error('Encryption failed', error);

@@ -13,7 +13,6 @@ interface GitHubProfile {
 @Injectable()
 export class UserService {
     private readonly logger = new Logger(UserService.name);
-    // In-memory store - replace with a real database in production
     private readonly users = new Map<string, User>();
     private readonly githubIdIndex = new Map<number, string>();
 
@@ -36,12 +35,9 @@ export class UserService {
 
         if (existingUser) {
             this.logger.log(`User found: ${profile.username} (GitHub ID: ${profile.id})`);
-            // Update the access token
             const updatedUser = await this.updateAccessToken(existingUser.id, accessToken);
             return updatedUser;
         }
-
-        // Create new user
         const encryptedToken = this.encryptionService.encrypt(accessToken);
         const now = new Date();
 
