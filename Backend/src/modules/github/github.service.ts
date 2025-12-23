@@ -1,10 +1,10 @@
 import {
   ForbiddenException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Octokit } from '@octokit/rest';
 import { GithubCommit } from './entities/github-commit.entity';
@@ -12,35 +12,49 @@ import GithubApiError from './types/github-api-error.interface';
 import { LlmService } from 'src/core/llm/llm.service';
 import { GithubRepository } from './entities/github-repository.entity';
 import { DailyReportResponse } from 'src/core/llm/dto/daily-report.dto';
+import { User } from '../auth/entities/user.entity';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class GithubService {
   private readonly logger = new Logger(GithubService.name);
 
   constructor(
-    @Inject('OCTOKIT_INSTANCE') private readonly octokit: Octokit,
     private readonly llmService: LlmService,
+    private readonly authService: AuthService,
   ) { }
 
-  async listUserRepos(): Promise<GithubRepository[]> {
-    try {
-      this.logger.log(`Fetching repositories for the authenticated user and their organizations`);
+  private createOctokit(user: User): Octokit {
+    const token = this.authService.getDecryptedGithubToken(user);
+    return new Octokit({
+      auth: token,
+      request: {
+        timeout: 10000,
+      },
+    });
+  }
 
-      
-      const { data: userRepos } = await this.octokit.repos.listForAuthenticatedUser({
+  async listUserRepos(user: User): Promise<GithubRepository[]> {
+    const octokit = this.createOctokit(user);
+
+    try {
+      this.logger.log(`Fetching repositories for user: ${user.username}`);
+
+
+      const { data: userRepos } = await octokit.repos.listForAuthenticatedUser({
         type: 'owner',
         sort: 'updated',
         per_page: 100,
       });
       this.logger.log(`Successfully fetched ${userRepos.length} personal repositories`);
 
-      
-      const { data: orgs } = await this.octokit.orgs.listForAuthenticatedUser();
+
+      const { data: orgs } = await octokit.orgs.listForAuthenticatedUser();
       this.logger.log(`User is a member of ${orgs.length} organizations`);
 
-      
+
       const orgReposPromises = orgs.map(org =>
-        this.octokit.repos.listForOrg({
+        octokit.repos.listForOrg({
           org: org.login,
           type: 'member',
           per_page: 100,
@@ -53,7 +67,7 @@ export class GithubService {
       const orgReposArrays = await Promise.all(orgReposPromises);
       const orgRepos = orgReposArrays.flat();
 
-      
+
       const allRepos = [...userRepos, ...orgRepos];
       const uniqueRepos = Array.from(new Map(allRepos.map(repo => [repo.id, repo])).values());
 
@@ -76,6 +90,12 @@ export class GithubService {
       const err = error as GithubApiError;
       this.logger.error(`Failed to fetch repositories`, err.stack);
 
+      if (err.status === 401) {
+        throw new UnauthorizedException(
+          'GitHub token is invalid or revoked. Please re-authenticate.',
+        );
+      }
+
       if (err.status === 403) {
         throw new ForbiddenException(
           'GitHub API rate limit exceeded or access forbidden',
@@ -88,11 +108,13 @@ export class GithubService {
     }
   }
 
-  async listRepoBranches(owner: string, repo: string): Promise<string[]> {
+  async listRepoBranches(user: User, owner: string, repo: string): Promise<string[]> {
+    const octokit = this.createOctokit(user);
+
     try {
       this.logger.log(`Fetching branches for ${owner}/${repo}`);
 
-      const { data } = await this.octokit.repos.listBranches({
+      const { data } = await octokit.repos.listBranches({
         owner,
         repo,
         per_page: 100,
@@ -105,6 +127,12 @@ export class GithubService {
       const err = error as GithubApiError;
       this.logger.error(`Failed to fetch branches for ${owner}/${repo}`, err.stack);
 
+      if (err.status === 401) {
+        throw new UnauthorizedException(
+          'GitHub token is invalid or revoked. Please re-authenticate.',
+        );
+      }
+
       if (err.status === 404) {
         throw new NotFoundException(`Repository ${owner}/${repo} not found`);
       }
@@ -116,11 +144,14 @@ export class GithubService {
   }
 
   async fetchCommits(
+    user: User,
     owner: string,
     repo: string,
     branch?: string,
     page?: number,
   ): Promise<GithubCommit[]> {
+    const octokit = this.createOctokit(user);
+
     try {
       const pageNumber = page || 1;
       this.logger.log(
@@ -145,7 +176,7 @@ export class GithubService {
         this.logger.log(`Filtering by branch: ${branch}`);
       }
 
-      const { data } = await this.octokit.repos.listCommits(params);
+      const { data } = await octokit.repos.listCommits(params);
 
       this.logger.log(
         `Successfully fetched ${data.length} commits for ${owner}/${repo}`,
@@ -156,10 +187,10 @@ export class GithubService {
         message: commit.commit.message,
         author: commit.commit.author
           ? {
-              name: commit.commit.author.name || '',
-              email: commit.commit.author.email || '',
-              date: commit.commit.author.date || '',
-            }
+            name: commit.commit.author.name || '',
+            email: commit.commit.author.email || '',
+            date: commit.commit.author.date || '',
+          }
           : null,
         url: commit.html_url,
       }));
@@ -169,6 +200,12 @@ export class GithubService {
         `Failed to fetch commits for ${owner}/${repo}`,
         err.stack,
       );
+
+      if (err.status === 401) {
+        throw new UnauthorizedException(
+          'GitHub token is invalid or revoked. Please re-authenticate.',
+        );
+      }
 
       if (err.status === 404) {
         throw new NotFoundException(`Repository ${owner}/${repo} not found`);
@@ -192,11 +229,11 @@ export class GithubService {
     }
   }
 
-  async generateCommitReport(commits: GithubCommit[]): Promise<DailyReportResponse> {
+  async generateCommitReport(user: User, commits: GithubCommit[]): Promise<DailyReportResponse> {
     this.logger.log(`Generating report for ${commits.length} commits.`);
 
-    
-    const enrichedCommits = await this.enrichCommitsWithDetails(commits.slice(0, 50));
+
+    const enrichedCommits = await this.enrichCommitsWithDetails(user, commits.slice(0, 50));
 
     const formattedCommits = enrichedCommits
       .map((commit) => {
@@ -231,9 +268,9 @@ export class GithubService {
     return this.llmService.generateReport(formattedCommits);
   }
 
-  private async enrichCommitsWithDetails(commits: GithubCommit[]): Promise<GithubCommit[]> {
-    
-    
+  private async enrichCommitsWithDetails(user: User, commits: GithubCommit[]): Promise<GithubCommit[]> {
+    const octokit = this.createOctokit(user);
+
     if (commits.length === 0) return commits;
 
     const urlParts = commits[0].url.split('/');
@@ -246,7 +283,7 @@ export class GithubService {
 
     for (const commit of commits) {
       try {
-        const { data } = await this.octokit.repos.getCommit({
+        const { data } = await octokit.repos.getCommit({
           owner,
           repo,
           ref: commit.sha,
@@ -265,7 +302,7 @@ export class GithubService {
             additions: file.additions || 0,
             deletions: file.deletions || 0,
             changes: file.changes || 0,
-            patch: file.patch, 
+            patch: file.patch,
           })),
         });
       } catch (error) {

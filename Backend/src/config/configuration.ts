@@ -12,4 +12,15 @@ export const configuration = () => ({
   github: {
     token: process.env.GITHUB_TOKEN,
   },
+  auth: {
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackUrl: process.env.GITHUB_CALLBACK_URL || 'http://localhost:3000/auth/github/callback',
+    },
+    jwtSecret: process.env.JWT_SECRET,
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    encryptionKey: process.env.ENCRYPTION_KEY,
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  },
 });

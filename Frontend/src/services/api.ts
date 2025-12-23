@@ -35,6 +35,11 @@ export class ApiError extends Error {
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('whatidid_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let errorMessage = `HTTP error! status: ${response.status}`;
@@ -47,7 +52,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
         errorMessage = errorBody.message;
       }
     } catch {
-      
+
+    }
+
+    // Se não autorizado, redireciona para login
+    if (response.status === 401) {
+      localStorage.removeItem('whatidid_token');
+      localStorage.removeItem('whatidid_user');
+      window.location.href = '/login';
     }
 
     throw new ApiError(errorMessage, response.status, details);
@@ -64,6 +76,7 @@ async function fetchApi<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       ...options?.headers,
     },
   });
