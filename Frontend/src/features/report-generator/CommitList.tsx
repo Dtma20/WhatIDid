@@ -72,6 +72,7 @@ export function CommitList({ commits, selectedCommitIds, onToggleCommit, onToggl
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onToggleCommit(commit.sha)}
+                  onClick={(e) => e.stopPropagation()}
                   className="mt-1"
                   aria-hidden="true"
                 />

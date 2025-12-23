@@ -13,13 +13,17 @@ function reportToMarkdown(report: Report): string {
   const lines: string[] = [];
   const { summary, groups, meta } = report;
 
-  lines.push(`# ${summary.title}`);
+  if (!summary || !meta) {
+    return '# Relatório\n\nNenhum dado disponível.';
+  }
+
+  lines.push(`# ${summary.title || 'Relatório'}`);
   lines.push('');
-  lines.push(`> 📅 ${meta.date_context} | 🔧 ${meta.primary_language} | ⚡ Esforço: ${meta.effort_level}`);
+  lines.push(`> 📅 ${meta.date_context || ''} | 🔧 ${meta.primary_language || ''} | ⚡ Esforço: ${meta.effort_level || ''}`);
   lines.push('');
   lines.push('## Resumo Executivo');
   lines.push('');
-  lines.push(summary.executive_overview);
+  lines.push(summary.executive_overview || '');
   lines.push('');
 
   if (summary.technical_highlights.length > 0) {
@@ -50,6 +54,18 @@ function reportToMarkdown(report: Report): string {
 export function ReportDisplay({ report }: ReportDisplayProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+
+  if (!report || !report.summary || !report.meta) {
+    return (
+      <Card className="overflow-hidden border-destructive/50 bg-destructive/5">
+        <CardContent className="p-6 text-center">
+          <p className="text-sm text-destructive">
+            Erro ao carregar o relatório. Tente gerar novamente.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const markdownContent = reportToMarkdown(report);
   const { summary, groups, meta } = report;

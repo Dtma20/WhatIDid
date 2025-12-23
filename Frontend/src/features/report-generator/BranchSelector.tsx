@@ -23,7 +23,7 @@ export function BranchSelector({ branches, selectedBranch, onSelect, isLoading }
       </Label>
       <Select
         disabled={isLoading}
-        value={selectedBranch}
+        value={selectedBranch || undefined}
         onValueChange={onSelect}
       >
         <SelectTrigger
