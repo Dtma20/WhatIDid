@@ -50,13 +50,24 @@ export class ReportController {
     private extractSummary(content: unknown): string {
         if (typeof content === 'object' && content !== null) {
             const c = content as Record<string, unknown>;
-            if (typeof c.summary === 'string') {
+
+            // If the LLM returned a structured summary object, prefer summary.title
+            if (c.summary && typeof c.summary === 'object') {
+                const s = c.summary as Record<string, unknown>;
+                if (typeof s.title === 'string' && s.title.trim().length > 0) {
+                    return s.title;
+                }
+            }
+
+            // Backwards-compatible cases: summary as string or top-level title
+            if (typeof c.summary === 'string' && c.summary.trim().length > 0) {
                 return c.summary;
             }
-            if (typeof c.title === 'string') {
+            if (typeof c.title === 'string' && c.title.trim().length > 0) {
                 return c.title;
             }
         }
+
         return 'Report generated';
     }
 }

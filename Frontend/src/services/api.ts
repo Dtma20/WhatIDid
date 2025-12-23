@@ -114,6 +114,21 @@ export interface Report {
   groups: ReportGroup[];
 }
 
+export interface SavedReport {
+  id: string;
+  repositoryName: string;
+  generatedAt: string;
+  summary: string;
+  isFavorite?: boolean;
+}
+
+export interface SavedReportDetail {
+  id: string;
+  repositoryName: string;
+  generatedAt: string;
+  content: Report;
+}
+
 export const api = {
   getRepositories: (): Promise<Repository[]> => {
     return fetchApi<Repository[]>('/github/repositories');
@@ -138,5 +153,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ commits }),
     });
+  },
+
+  getReports: (): Promise<{ data: SavedReport[]; total: number }> => {
+    return fetchApi<{ data: SavedReport[]; total: number }>('/reports');
+  },
+
+  getReportById: (id: string): Promise<SavedReportDetail> => {
+    return fetchApi<SavedReportDetail>(`/reports/${id}`);
+  },
+
+  deleteReport: (id: string): Promise<void> => {
+    return fetchApi<void>(`/reports/${id}`, { method: 'DELETE' });
   },
 };

@@ -4,10 +4,11 @@ import { RepoSelector } from "@/features/report-generator/RepoSelector";
 import { BranchSelector } from "@/features/report-generator/BranchSelector";
 import { CommitList } from "@/features/report-generator/CommitList";
 import { ReportDisplay } from "@/features/report-generator/ReportDisplay";
+import { ReportSidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { TypewriterText } from "@/components/shared/TypewriterText";
@@ -15,6 +16,7 @@ import { UserMenu } from "@/components/shared/UserMenu";
 
 export default function DashboardPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const reportSectionRef = useRef<HTMLElement>(null);
   const { ref: inViewRef, inView } = useInView({ threshold: 0.5 });
 
@@ -23,6 +25,31 @@ export default function DashboardPage() {
   const [selectedCommitIds, setSelectedCommitIds] = useState<string[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [showSubtitle, setShowSubtitle] = useState(false);
+  const [activeReportId, setActiveReportId] = useState<string | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(true);
+
+  const { data: savedReportsData, isLoading: isLoadingReports } = useQuery({
+    queryKey: ["reports"],
+    queryFn: api.getReports,
+  });
+
+  const savedReports = savedReportsData?.data ?? [];
+
+  const { mutate: deleteReportMutation } = useMutation({
+    mutationFn: api.deleteReport,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      if (activeReportId) {
+        setActiveReportId(null);
+        setReport(null);
+        setIsCreatingNew(true);
+      }
+      toast({ title: "Relatório excluído" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao excluir", variant: "destructive" });
+    },
+  });
 
   const { mutate: generateReport, isPending: isGenerating } = useMutation<
     Report,
@@ -155,123 +182,162 @@ export default function DashboardPage() {
     setSelectedCommitIds(checked ? commits.map((c) => c.sha) : []);
   };
 
+  const handleSelectReport = async (id: string) => {
+    try {
+      const reportDetail = await api.getReportById(id);
+      setReport(reportDetail.content);
+      setActiveReportId(id);
+      setIsCreatingNew(false);
+      setTimeout(() => {
+        reportSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch {
+      toast({ title: "Erro ao carregar relatório", variant: "destructive" });
+    }
+  };
+
+  const handleNewReport = () => {
+    setActiveReportId(null);
+    setReport(null);
+    setIsCreatingNew(true);
+    setSelectedRepoName("");
+    setSelectedBranch("");
+    setSelectedCommitIds([]);
+  };
+
+  const handleDeleteReport = (id: string) => {
+    deleteReportMutation(id);
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
-      <div className="absolute top-4 left-4">
-        <UserMenu />
-      </div>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <header className="mb-12 text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4 animate-spin-in-grow">
-            <Sparkles className="w-6 h-6 text-primary" />
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
-            <TypewriterText
-              text="WhatIDid"
-              speed={80}
-              onComplete={() => setShowSubtitle(true)}
-            />
-          </h1>
-          <p className="text-xl max-w-lg mx-auto h-7">
-            <span className="text-muted-foreground/90">
-              {showSubtitle && (
-                <TypewriterText
-                  text="Transforme seu histórico do Git em relatórios profissionais em segundos."
-                  speed={40}
-                />
-              )}
-            </span>
-          </p>
-        </header>
+    <div className="flex min-h-screen bg-background text-foreground">
+      <ReportSidebar
+        reports={savedReports}
+        activeReportId={activeReportId}
+        isLoading={isLoadingReports}
+        onSelectReport={handleSelectReport}
+        onNewReport={handleNewReport}
+        onDeleteReport={handleDeleteReport}
+      />
 
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <section className="bg-card border rounded-xl p-6 shadow-sm space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <RepoSelector
-                repos={repos}
-                selectedRepoName={selectedRepoName}
-                onSelect={setSelectedRepoName}
-                isLoading={isLoadingRepos}
-              />
-              <BranchSelector
-                branches={branches}
-                selectedBranch={selectedBranch}
-                onSelect={setSelectedBranch}
-                isLoading={isLoadingBranches}
-              />
+      <main className="flex-1 pb-20 overflow-auto">
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <UserMenu />
+          <ThemeToggle />
+        </div>
+
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <header className="mb-12 text-center space-y-4">
+            <div className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4 animate-spin-in-grow">
+              <Sparkles className="w-6 h-6 text-primary" />
             </div>
-          </section>
-
-          {selectedRepo && selectedBranch && (
-            <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Selecionar Commits</h2>
-                {commits.length > 0 && (
-                  <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                    {commits.length} commits encontrados
-                  </span>
+            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+              <TypewriterText
+                text="WhatIDid"
+                speed={80}
+                onComplete={() => setShowSubtitle(true)}
+              />
+            </h1>
+            <p className="text-xl max-w-lg mx-auto h-7">
+              <span className="text-muted-foreground/90">
+                {showSubtitle && (
+                  <TypewriterText
+                    text="Transforme seu histórico do Git em relatórios profissionais em segundos."
+                    speed={40}
+                  />
                 )}
-              </div>
+              </span>
+            </p>
+          </header>
 
-              {isLoadingCommits && !isFetchingNextPage ? (
-                <div className="h-96 border rounded-xl flex flex-col items-center justify-center bg-card/50 space-y-3">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground font-medium">
-                    Buscando commits...
-                  </p>
+          {isCreatingNew && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+              <section className="bg-card border rounded-xl p-6 shadow-sm space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <RepoSelector
+                    repos={repos}
+                    selectedRepoName={selectedRepoName}
+                    onSelect={setSelectedRepoName}
+                    isLoading={isLoadingRepos}
+                  />
+                  <BranchSelector
+                    branches={branches}
+                    selectedBranch={selectedBranch}
+                    onSelect={setSelectedBranch}
+                    isLoading={isLoadingBranches}
+                  />
                 </div>
-              ) : (
-                <CommitList
-                  commits={commits}
-                  selectedCommitIds={selectedCommitIds}
-                  onToggleCommit={toggleCommit}
-                  onToggleAll={toggleAllCommits}
-                />
-              )}
+              </section>
 
-              {hasNextPage && (
-                <div
-                  ref={inViewRef}
-                  className="flex items-center justify-center pt-4"
-                >
-                  <Button
-                    variant="ghost"
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                  >
-                    {isFetchingNextPage ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      "Carregar mais"
+              {selectedRepo && selectedBranch && (
+                <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Selecionar Commits</h2>
+                    {commits.length > 0 && (
+                      <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                        {commits.length} commits encontrados
+                      </span>
                     )}
-                  </Button>
-                </div>
-              )}
+                  </div>
 
-              <div className="flex justify-end pt-4">
-                <Button
-                  size="lg"
-                  onClick={handleGenerateReportClick}
-                  disabled={isGenerating || selectedCommitIds.length === 0}
-                  className="w-full font-semibold shadow-lg transition-all"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Analisando...
-                    </>
+                  {isLoadingCommits && !isFetchingNextPage ? (
+                    <div className="h-96 border rounded-xl flex flex-col items-center justify-center bg-card/50 space-y-3">
+                      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground font-medium">
+                        Buscando commits...
+                      </p>
+                    </div>
                   ) : (
-                    <>
-                      <Sparkles className="mr-2 h-5 w-5" />
-                      Gerar Relatório {selectedCommitIds.length > 0 && `(${selectedCommitIds.length})`}
-                    </>
+                    <CommitList
+                      commits={commits}
+                      selectedCommitIds={selectedCommitIds}
+                      onToggleCommit={toggleCommit}
+                      onToggleAll={toggleAllCommits}
+                    />
                   )}
-                </Button>
-              </div>
-            </section>
+
+                  {hasNextPage && (
+                    <div
+                      ref={inViewRef}
+                      className="flex items-center justify-center pt-4"
+                    >
+                      <Button
+                        variant="ghost"
+                        onClick={() => fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                      >
+                        {isFetchingNextPage ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          "Carregar mais"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      size="lg"
+                      onClick={handleGenerateReportClick}
+                      disabled={isGenerating || selectedCommitIds.length === 0}
+                      className="w-full font-semibold shadow-lg transition-all"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Analisando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-5 w-5" />
+                          Gerar Relatório {selectedCommitIds.length > 0 && `(${selectedCommitIds.length})`}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </section>
+              )}
+            </div>
           )}
 
           {report && (
@@ -280,7 +346,7 @@ export default function DashboardPage() {
             </section>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

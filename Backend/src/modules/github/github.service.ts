@@ -14,6 +14,7 @@ import { GithubRepository } from './entities/github-repository.entity';
 import { DailyReportResponse } from 'src/core/llm/dto/daily-report.dto';
 import { User } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
+import { ReportService } from '../report/report.service';
 
 @Injectable()
 export class GithubService {
@@ -22,6 +23,7 @@ export class GithubService {
   constructor(
     private readonly llmService: LlmService,
     private readonly authService: AuthService,
+    private readonly reportService: ReportService,
   ) { }
 
   private createOctokit(user: User): Octokit {
@@ -232,8 +234,15 @@ export class GithubService {
   async generateCommitReport(user: User, commits: GithubCommit[]): Promise<DailyReportResponse> {
     this.logger.log(`Generating report for ${commits.length} commits.`);
 
-
     const enrichedCommits = await this.enrichCommitsWithDetails(user, commits.slice(0, 50));
+
+    let repositoryName = 'unknown';
+    if (commits.length > 0 && commits[0].url) {
+      const urlParts = commits[0].url.split('/');
+      if (urlParts.length >= 6) {
+        repositoryName = `${urlParts[4]}/${urlParts[5]}`;
+      }
+    }
 
     const formattedCommits = enrichedCommits
       .map((commit) => {
@@ -265,7 +274,12 @@ export class GithubService {
       })
       .join('\n\n---\n\n');
 
-    return this.llmService.generateReport(formattedCommits);
+    const report = await this.llmService.generateReport(formattedCommits);
+
+    await this.reportService.create(user.id, report, repositoryName);
+    this.logger.log(`Report saved for user ${user.id} - repository: ${repositoryName}`);
+
+    return report;
   }
 
   private async enrichCommitsWithDetails(user: User, commits: GithubCommit[]): Promise<GithubCommit[]> {
