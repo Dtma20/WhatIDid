@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   String   @id @default(cuid())
+  githubId             String   @unique
+  username             String
+  avatarUrl            String?
+  encryptedAccessToken String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  reports              Report[]
+
+  @@index([githubId])
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  userId         String
+  repositoryName String
+  content        Json     @db.JsonB
+  generatedAt    DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([content(ops: JsonbPathOps)], type: Gin)
+}

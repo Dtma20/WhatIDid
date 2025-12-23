@@ -9,7 +9,6 @@ import { GithubStrategy } from './strategies/github.strategy';
 import { GithubPublicStrategy } from './strategies/github-public.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { EncryptionService } from './services/encryption.service';
 import { UserService } from './services/user.service';
 
 @Module({
@@ -28,7 +27,6 @@ import { UserService } from './services/user.service';
     controllers: [AuthController],
     providers: [
         AuthService,
-        EncryptionService,
         UserService,
         GithubStrategy,
         GithubPublicStrategy,
@@ -38,6 +36,6 @@ import { UserService } from './services/user.service';
             useClass: JwtAuthGuard,
         },
     ],
-    exports: [AuthService, UserService, EncryptionService],
+    exports: [AuthService, UserService],
 })
 export class AuthModule { }

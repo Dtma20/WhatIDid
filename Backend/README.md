@@ -28,6 +28,36 @@
 pnpm install
 ```
 
+## Database Setup
+
+Start PostgreSQL and pgAdmin using Docker:
+
+```bash
+docker-compose up -d
+```
+
+This will start:
+
+- PostgreSQL 16 on port 5432
+- pgAdmin on port 5050 (<http://localhost:5050>)
+
+Default credentials:
+
+- PostgreSQL: user `whatidid`, password `whatidid123`, database `whatidid`
+- pgAdmin: email `admin@whatidid.local`, password `admin123`
+
+Run database migrations:
+
+```bash
+pnpm run prisma:migrate
+```
+
+Seed the database (optional):
+
+```bash
+pnpm run prisma:seed
+```
+
 ## Compile and run the project
 
 ```bash

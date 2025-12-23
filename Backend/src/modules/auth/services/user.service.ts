@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { User } from '../entities/user.entity';
-import { EncryptionService } from './encryption.service';
-import { randomUUID } from 'crypto';
+import { PRISMA_CLIENT } from '../../../database';
+import type { ExtendedPrismaClient } from '../../../database';
 
 interface GitHubProfile {
     id: number;
@@ -13,70 +13,83 @@ interface GitHubProfile {
 @Injectable()
 export class UserService {
     private readonly logger = new Logger(UserService.name);
-    private readonly users = new Map<string, User>();
-    private readonly githubIdIndex = new Map<number, string>();
 
-    constructor(private readonly encryptionService: EncryptionService) { }
+    constructor(
+        @Inject(PRISMA_CLIENT) private readonly prisma: ExtendedPrismaClient,
+    ) { }
 
     async findByGithubId(githubId: number): Promise<User | null> {
-        const userId = this.githubIdIndex.get(githubId);
-        if (!userId) {
-            return null;
-        }
-        return this.users.get(userId) || null;
+        const user = await this.prisma.user.findUnique({
+            where: { githubId: String(githubId) },
+        });
+
+        if (!user) return null;
+
+        return this.mapToUser(user);
     }
 
     async findById(id: string): Promise<User | null> {
-        return this.users.get(id) || null;
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+        });
+
+        if (!user) return null;
+
+        return this.mapToUser(user);
     }
 
     async findOrCreate(profile: GitHubProfile, accessToken: string): Promise<User> {
-        const existingUser = await this.findByGithubId(profile.id);
+        const user = await this.prisma.user.upsert({
+            where: { githubId: String(profile.id) },
+            update: {
+                username: profile.username,
+                avatarUrl: profile.avatar,
+                encryptedAccessToken: accessToken,
+            },
+            create: {
+                githubId: String(profile.id),
+                username: profile.username,
+                avatarUrl: profile.avatar,
+                encryptedAccessToken: accessToken,
+            },
+        });
 
-        if (existingUser) {
-            this.logger.log(`User found: ${profile.username} (GitHub ID: ${profile.id})`);
-            const updatedUser = await this.updateAccessToken(existingUser.id, accessToken);
-            return updatedUser;
-        }
-        const encryptedToken = this.encryptionService.encrypt(accessToken);
-        const now = new Date();
+        this.logger.log(`User upserted: ${profile.username} (GitHub ID: ${profile.id})`);
 
-        const newUser: User = {
-            id: randomUUID(),
-            githubId: profile.id,
-            username: profile.username,
-            email: profile.email,
-            avatar: profile.avatar,
-            encryptedAccessToken: encryptedToken,
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        this.users.set(newUser.id, newUser);
-        this.githubIdIndex.set(profile.id, newUser.id);
-
-        this.logger.log(`New user created: ${profile.username} (GitHub ID: ${profile.id})`);
-        return newUser;
+        return this.mapToUser(user);
     }
 
     async updateAccessToken(userId: string, accessToken: string): Promise<User> {
-        const user = await this.findById(userId);
-        if (!user) {
-            throw new Error('User not found');
-        }
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: { encryptedAccessToken: accessToken },
+        });
 
-        const encryptedToken = this.encryptionService.encrypt(accessToken);
-        const updatedUser: User = {
-            ...user,
-            encryptedAccessToken: encryptedToken,
-            updatedAt: new Date(),
-        };
-
-        this.users.set(userId, updatedUser);
-        return updatedUser;
+        return this.mapToUser(user);
     }
 
     getDecryptedAccessToken(user: User): string {
-        return this.encryptionService.decrypt(user.encryptedAccessToken);
+        return user.encryptedAccessToken;
+    }
+
+    private mapToUser(dbUser: {
+        id: string;
+        githubId: string;
+        username: string;
+        avatarUrl: string | null;
+        encryptedAccessToken: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }): User {
+        return {
+            id: dbUser.id,
+            githubId: parseInt(dbUser.githubId, 10),
+            username: dbUser.username,
+            email: null,
+            avatar: dbUser.avatarUrl,
+            encryptedAccessToken: dbUser.encryptedAccessToken,
+            createdAt: dbUser.createdAt,
+            updatedAt: dbUser.updatedAt,
+        };
     }
 }
