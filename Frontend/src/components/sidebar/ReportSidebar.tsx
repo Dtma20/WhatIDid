@@ -338,10 +338,10 @@ export function ReportSidebar({
                     <Button
                         variant="outline"
                         onClick={onNewReport}
-                        className="w-full justify-start gap-2"
+                        className="w-full relative"
                     >
-                        <Plus className="h-4 w-4" />
-                        Novo Relatório
+                        <Plus className="h-4 w-4 absolute left-4" />
+                        <span className="mx-auto">Novo Relatório</span>
                     </Button>
                 )}
             </div>
