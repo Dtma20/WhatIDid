@@ -1,45 +1,42 @@
 # What I Did
 
-"What I Did" is a web application that automatically generates a summary of development activities from a GitHub repository for a given day. The user provides a repository URL and a date, and the application fetches the commits, uses a Large Language Model (LLM) to analyze them, and presents a summarized report.
+What I Did generates concise, structured daily reports from a Git history using an LLM.
 
-## Architecture Overview
+## 🛠 Tech Stack
 
-The project is a monorepo with a `Backend` and a `Frontend`.
+* **Backend:** NestJS, Prisma (PostgreSQL), AES-256-GCM encryption for tokens.
+* **Frontend:** React, Vite, Tailwind CSS.
+* **LLM:** Gemini (via adapter pattern).
 
-- **Backend**: A [NestJS](https://nestjs.com/) application responsible for fetching and processing data.
-  - **GitHub Service**: Fetches commit data from GitHub repositories using `@octokit/rest`.
-  - **LLM Intelligence**: An agnostic module for interacting with Large Language Models (like Google Gemini) to analyze and summarize commit messages. It uses a factory and adapter pattern for flexibility.
-- **Frontend**: A [React](https://react.dev/) application built with [Vite](https://vitejs.dev/) and styled with [TailwindCSS](https://tailwindcss.com/) for a modern and responsive user interface.
+## 🚀 Local Setup
 
-## How it Works
+### 1. Environment Variables
 
-1. The user provides a GitHub repository URL and selects a date on the frontend.
-2. The frontend sends a request to the backend's `/api/generate-daily` endpoint.
-3. The backend's GitHub Service fetches all commits for the specified day.
-4. The commits are processed and sanitized to remove irrelevant information.
-5. The cleaned commit messages are sent to an LLM via the LlmService for analysis and summarization.
-6. The backend returns the generated summary as a structured response.
-7. The frontend displays the summary to the user in a clean, readable format.
+No diretório `Backend`, configure o seu `.env`. Os pontos de atenção são:
 
-## Project setup
+* `DATABASE_URL`: O Postgres roda por padrão na porta **5433** (via Docker).
+* `ENCRYPTION_KEY`: Deve ser uma string de 64 caracteres hexadecimais.
+* `GEMINI_API_KEY`: Sua chave de API do Google AI Studio.
+
+### 2. Run the App
 
 ```bash
-# Install all dependencies for both backend and frontend
 pnpm install
+docker compose up -d
+cd Backend && pnpm prisma migrate dev && cd ..
+pnpm dev
 ```
 
-## Running the project
+* **Frontend:** [http://localhost:5173](https://www.google.com/search?q=http://localhost:5173)
+* **Backend:** [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000)
 
-```bash
-# Run both frontend and backend in development mode
-# The frontend will be available on http://localhost:5173
-# The backend will be available on http://localhost:3000
-pnpm run dev
-```
+## 📌 Important Notes
 
-## Run tests
+* **Database:** O PostgreSQL está configurado no `docker-compose.yaml` para usar a porta **5433** para evitar conflitos com instâncias locais.
+* **Security:** Tokens de acesso são criptografados em repouso no banco de dados via extensão do Prisma.
+* **LLM Schema:** O backend utiliza um schema JSON estrito. Caso altere o prompt, valide o DTO em `Backend/src/core/llm/dto/daily-report.dto.ts`.
 
-```bash
-# Run all backend tests
-pnpm --filter backend test
-```
+## 🔍 Troubleshooting
+
+* **Backend não inicia:** Verifique se a `ENCRYPTION_KEY` possui exatamente 64 caracteres hexadecimais.
+* **Erro de Conexão com Banco:** Certifique-se de que o container Docker está rodando e que a porta no `DATABASE_URL` é a `5433`.
