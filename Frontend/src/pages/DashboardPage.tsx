@@ -161,7 +161,7 @@ export default function DashboardPage() {
       </div>
       <div className="max-w-4xl mx-auto px-6 py-12">
         <header className="mb-12 text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4 animate-spin-in-grow">
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
