@@ -11,6 +11,7 @@ import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { TypewriterText } from "@/components/shared/TypewriterText";
+import { UserMenu } from "@/components/shared/UserMenu";
 
 export default function DashboardPage() {
   const { toast } = useToast();
@@ -156,6 +157,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
+      <div className="absolute top-4 left-4">
+        <UserMenu />
+      </div>
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>

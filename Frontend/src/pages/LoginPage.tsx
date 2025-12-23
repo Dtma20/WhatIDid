@@ -46,10 +46,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      <footer className="py-6 text-center text-sm text-muted-foreground">
-        Feito com ❤️ para desenvolvedores
-      </footer>
     </div>
   );
 }
