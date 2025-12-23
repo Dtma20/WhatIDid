@@ -25,8 +25,10 @@ export default function DashboardPage() {
   const [selectedCommitIds, setSelectedCommitIds] = useState<string[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [showSubtitle, setShowSubtitle] = useState(false);
+  const [startTitleTyping, setStartTitleTyping] = useState(false);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(true);
+  const iconRef = useRef<HTMLDivElement | null>(null);
 
   const { data: savedReportsData, isLoading: isLoadingReports } = useQuery({
     queryKey: ["reports"],
@@ -156,6 +158,25 @@ export default function DashboardPage() {
     }
   }, [commitsKey]);
 
+  useEffect(() => {
+    const el = iconRef.current;
+    if (!el) {
+      setStartTitleTyping(true);
+      return;
+    }
+
+    const onAnimEnd = () => setStartTitleTyping(true);
+    el.addEventListener('animationend', onAnimEnd);
+
+    // Fallback: ensure typing starts after 1500ms if animationend doesn't fire
+    const fallback = setTimeout(() => setStartTitleTyping(true), 1500);
+
+    return () => {
+      el.removeEventListener('animationend', onAnimEnd);
+      clearTimeout(fallback);
+    };
+  }, [iconRef]);
+
   const handleGenerateReportClick = () => {
     if (selectedCommitIds.length === 0) {
       toast({
@@ -222,27 +243,31 @@ export default function DashboardPage() {
 
       <main className="flex-1 pb-20 overflow-auto">
         <div className="absolute top-4 right-4 flex items-center gap-2">
-          <UserMenu />
           <ThemeToggle />
+          <UserMenu />
         </div>
 
         <div className="max-w-4xl mx-auto px-6 py-12">
           <header className="mb-12 text-center space-y-4">
-            <div className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4 animate-spin-in-grow">
+            <div ref={iconRef} className="inline-flex items-center justify-center p-3 bg-primary/5 rounded-full mb-4 animate-spin-in-grow">
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
-              <TypewriterText
-                text="WhatIDid"
-                speed={80}
-                onComplete={() => setShowSubtitle(true)}
-              />
+            <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">
+              {startTitleTyping ? (
+                <TypewriterText
+                  text="WhatIDid"
+                  speed={80}
+                  onComplete={() => setShowSubtitle(true)}
+                />
+              ) : (
+                <span aria-hidden className="inline-block w-0 h-0" />
+              )}
             </h1>
-            <p className="text-xl max-w-lg mx-auto h-7">
+            <p className="text-md max-w-lg mx-auto h-7">
               <span className="text-muted-foreground/90">
                 {showSubtitle && (
                   <TypewriterText
-                    text="Transforme seu histórico do Git em relatórios profissionais em segundos."
+                    text="Relatórios a partir do seu Git em segundos"
                     speed={40}
                   />
                 )}

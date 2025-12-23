@@ -17,6 +17,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TypewriterText } from "@/components/shared/TypewriterText";
 import { cn } from "@/lib/utils";
 import type { SavedReport } from "@/services/api";
 
@@ -151,7 +152,7 @@ function ReportItem({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             className={cn(
-                "group relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200",
+                "group relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 overflow-hidden",
                 isActive
                     ? "bg-primary/10 text-foreground border-l-2 border-primary"
                     : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
@@ -160,7 +161,7 @@ function ReportItem({
         >
             <FileText className="w-4 h-4 shrink-0" />
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden" style={{ maxWidth: 'calc(100% - 24px)' }}>
                 {isEditing ? (
                     <input
                         ref={inputRef}
@@ -174,8 +175,10 @@ function ReportItem({
                     />
                 ) : (
                     <>
-                        <p className="text-sm font-medium truncate">{report.summary}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-sm font-medium truncate text-ellipsis whitespace-nowrap overflow-hidden">
+                            <TypewriterText text={report.summary} speed={20} />
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate text-ellipsis whitespace-nowrap overflow-hidden">
                             {report.repositoryName}
                         </p>
                     </>
@@ -293,9 +296,10 @@ export function ReportSidebar({
     return (
         <aside
             className={cn(
-                "h-screen bg-card border-r flex flex-col transition-all duration-300 ease-in-out",
+                "sticky top-0 self-start h-screen bg-card border-r flex flex-col transition-all duration-300 ease-in-out",
                 isCollapsed ? "w-16" : "w-72"
             )}
+            style={{ zIndex: 20 }}
         >
             <div className="flex items-center justify-between p-4 border-b">
                 {!isCollapsed && (
@@ -342,7 +346,7 @@ export function ReportSidebar({
                 )}
             </div>
 
-            <ScrollArea className="flex-1 px-2 py-2">
+            <ScrollArea className="flex-1 px-2 py-2 overflow-hidden">
                 {isLoading ? (
                     <div className="flex items-center justify-center py-8">
                         <div className="animate-pulse text-muted-foreground text-sm">
@@ -359,7 +363,7 @@ export function ReportSidebar({
                         )}
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 w-full overflow-hidden">
                         <ReportGroup
                             title="Hoje"
                             reports={groupedReports.today}
