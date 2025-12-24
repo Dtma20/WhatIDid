@@ -13,7 +13,7 @@ import { useInView } from "react-intersection-observer";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { TypewriterText } from "@/components/shared/TypewriterText";
 import { UserMenu } from "@/components/shared/UserMenu";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export default function DashboardPage() {
   const { toast } = useToast();
@@ -237,6 +237,8 @@ export default function DashboardPage() {
 
       <Sheet open={leftSidebarOpen} onOpenChange={setLeftSidebarOpen}>
         <SheetContent side="left" className="w-80 p-0">
+          <SheetTitle className="sr-only">Barra lateral de relatórios</SheetTitle>
+          <SheetDescription className="sr-only">Lista de relatórios salvos e ações relacionadas</SheetDescription>
           <ReportSidebar
             reports={savedReports}
             activeReportId={activeReportId}
@@ -456,6 +458,8 @@ export default function DashboardPage() {
 
       <Sheet open={rightSidebarOpen} onOpenChange={setRightSidebarOpen}>
         <SheetContent side="right" className="w-full sm:w-96 p-0" hideCloseButton>
+          <SheetTitle className="sr-only">Painel do relatório</SheetTitle>
+          <SheetDescription className="sr-only">Visualização completa do relatório gerado</SheetDescription>
           <ReportPanel
             report={report}
             onClose={() => setRightSidebarOpen(false)}
