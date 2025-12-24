@@ -3,16 +3,17 @@ import { api, ApiError, type Repository, type Commit, type Report } from "@/serv
 import { RepoSelector } from "@/features/report-generator/RepoSelector";
 import { BranchSelector } from "@/features/report-generator/BranchSelector";
 import { CommitList } from "@/features/report-generator/CommitList";
-import { ReportDisplay } from "@/features/report-generator/ReportDisplay";
 import { ReportSidebar } from "@/components/sidebar";
+import { ReportPanel } from "@/components/report-panel";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Menu, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { TypewriterText } from "@/components/shared/TypewriterText";
 import { UserMenu } from "@/components/shared/UserMenu";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function DashboardPage() {
   const { toast } = useToast();
@@ -29,6 +30,8 @@ export default function DashboardPage() {
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(true);
   const iconRef = useRef<HTMLDivElement | null>(null);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
 
   const { data: savedReportsData, isLoading: isLoadingReports } = useQuery({
     queryKey: ["reports"],
@@ -168,7 +171,6 @@ export default function DashboardPage() {
     const onAnimEnd = () => setStartTitleTyping(true);
     el.addEventListener('animationend', onAnimEnd);
 
-    // Fallback: ensure typing starts after 1500ms if animationend doesn't fire
     const fallback = setTimeout(() => setStartTitleTyping(true), 1500);
 
     return () => {
@@ -232,22 +234,72 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <ReportSidebar
-        reports={savedReports}
-        activeReportId={activeReportId}
-        isLoading={isLoadingReports}
-        onSelectReport={handleSelectReport}
-        onNewReport={handleNewReport}
-        onDeleteReport={handleDeleteReport}
-      />
 
-      <main className="flex-1 pb-20 overflow-auto">
-        <div className="absolute top-4 right-4 flex items-center gap-2">
+      <Sheet open={leftSidebarOpen} onOpenChange={setLeftSidebarOpen}>
+        <SheetContent side="left" className="w-80 p-0">
+          <ReportSidebar
+            reports={savedReports}
+            activeReportId={activeReportId}
+            isLoading={isLoadingReports}
+            onSelectReport={(id) => {
+              handleSelectReport(id);
+              setLeftSidebarOpen(false);
+            }}
+            onNewReport={() => {
+              handleNewReport();
+              setLeftSidebarOpen(false);
+            }}
+            onDeleteReport={handleDeleteReport}
+            isMobile
+          />
+        </SheetContent>
+      </Sheet>
+
+
+      <div className="hidden lg:block">
+        <ReportSidebar
+          reports={savedReports}
+          activeReportId={activeReportId}
+          isLoading={isLoadingReports}
+          onSelectReport={handleSelectReport}
+          onNewReport={handleNewReport}
+          onDeleteReport={handleDeleteReport}
+        />
+      </div>
+
+      <main className="flex-1 pb-20 overflow-auto relative">
+
+        <div className="sticky top-0 z-10 lg:hidden flex items-center justify-between p-3 bg-background/95 backdrop-blur border-b">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLeftSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="font-semibold text-sm">WhatIDid</span>
+          <div className="flex items-center gap-1">
+            {report && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRightSidebarOpen(true)}
+              >
+                <FileText className="h-5 w-5" />
+              </Button>
+            )}
+            <ThemeToggle />
+            <UserMenu />
+          </div>
+        </div>
+
+
+        <div className="hidden lg:flex absolute top-4 right-4 items-center gap-2">
           <ThemeToggle />
           <UserMenu />
         </div>
 
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
           <header className="mb-12 text-center space-y-4">
             <div ref={iconRef} className="inline-flex items-center justify-center p-4 bg-background rounded-full mb-4 animate-spin-in-grow">
               <Sparkles className="w-6 h-6 text-primary" />
@@ -275,103 +327,142 @@ export default function DashboardPage() {
             </p>
           </header>
 
-          {isCreatingNew && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-              <section className="bg-card border rounded-xl p-6 shadow-sm space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <RepoSelector
-                    repos={repos}
-                    selectedRepoName={selectedRepoName}
-                    onSelect={setSelectedRepoName}
-                    isLoading={isLoadingRepos}
-                  />
-                  <BranchSelector
-                    branches={branches}
-                    selectedBranch={selectedBranch}
-                    onSelect={setSelectedBranch}
-                    isLoading={isLoadingBranches}
-                  />
+
+          <section className="bg-card border rounded-xl p-6 shadow-sm space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <RepoSelector
+                repos={repos}
+                selectedRepoName={selectedRepoName}
+                onSelect={(name) => {
+                  setSelectedRepoName(name);
+                  setIsCreatingNew(true);
+                }}
+                isLoading={isLoadingRepos}
+              />
+              <BranchSelector
+                branches={branches}
+                selectedBranch={selectedBranch}
+                onSelect={(branch) => {
+                  setSelectedBranch(branch);
+                  setIsCreatingNew(true);
+                }}
+                isLoading={isLoadingBranches}
+              />
+            </div>
+          </section>
+
+          {isCreatingNew && selectedRepo && selectedBranch && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
+              <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Selecionar Commits</h2>
+                  {commits.length > 0 && (
+                    <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                      {commits.length} commits encontrados
+                    </span>
+                  )}
                 </div>
-              </section>
 
-              {selectedRepo && selectedBranch && (
-                <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Selecionar Commits</h2>
-                    {commits.length > 0 && (
-                      <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                        {commits.length} commits encontrados
-                      </span>
-                    )}
+                {isLoadingCommits && !isFetchingNextPage ? (
+                  <div className="h-96 border rounded-xl flex flex-col items-center justify-center bg-card/50 space-y-3">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Buscando commits...
+                    </p>
                   </div>
+                ) : (
+                  <CommitList
+                    commits={commits}
+                    selectedCommitIds={selectedCommitIds}
+                    onToggleCommit={toggleCommit}
+                    onToggleAll={toggleAllCommits}
+                  />
+                )}
 
-                  {isLoadingCommits && !isFetchingNextPage ? (
-                    <div className="h-96 border rounded-xl flex flex-col items-center justify-center bg-card/50 space-y-3">
-                      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                      <p className="text-sm text-muted-foreground font-medium">
-                        Buscando commits...
-                      </p>
-                    </div>
-                  ) : (
-                    <CommitList
-                      commits={commits}
-                      selectedCommitIds={selectedCommitIds}
-                      onToggleCommit={toggleCommit}
-                      onToggleAll={toggleAllCommits}
-                    />
-                  )}
-
-                  {hasNextPage && (
-                    <div
-                      ref={inViewRef}
-                      className="flex items-center justify-center pt-4"
-                    >
-                      <Button
-                        variant="ghost"
-                        onClick={() => fetchNextPage()}
-                        disabled={isFetchingNextPage}
-                      >
-                        {isFetchingNextPage ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          "Carregar mais"
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end pt-4">
+                {hasNextPage && (
+                  <div
+                    ref={inViewRef}
+                    className="flex items-center justify-center pt-4"
+                  >
                     <Button
-                      size="lg"
-                      onClick={handleGenerateReportClick}
-                      disabled={isGenerating || selectedCommitIds.length === 0}
-                      className="w-full font-semibold shadow-lg transition-all"
+                      variant="ghost"
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
                     >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Analisando...
-                        </>
+                      {isFetchingNextPage ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
-                        <>
-                          <Sparkles className="mr-2 h-5 w-5" />
-                          Gerar Relatório {selectedCommitIds.length > 0 && `(${selectedCommitIds.length})`}
-                        </>
+                        "Carregar mais"
                       )}
                     </Button>
                   </div>
-                </section>
-              )}
+                )}
+
+                <div className="flex justify-end pt-4">
+                  <Button
+                    size="lg"
+                    onClick={handleGenerateReportClick}
+                    disabled={isGenerating || selectedCommitIds.length === 0}
+                    className="w-full font-semibold shadow-lg transition-all"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Analisando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Gerar Relatório {selectedCommitIds.length > 0 && `(${selectedCommitIds.length})`}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </section>
             </div>
           )}
 
           {report && (
-            <section ref={reportSectionRef} className="pt-8">
-              <ReportDisplay report={report} />
+            <section ref={reportSectionRef} className="pt-8 lg:hidden">
+
+              <div className="bg-card border rounded-xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Relatório Gerado</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRightSidebarOpen(true)}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Ver Completo
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {report.summary?.executive_overview?.slice(0, 150)}
+                  {(report.summary?.executive_overview?.length ?? 0) > 150 && "..."}
+                </p>
+              </div>
             </section>
           )}
         </div>
       </main>
+
+
+      <ReportPanel
+        report={report}
+        onClose={() => setReport(null)}
+      />
+
+
+      <Sheet open={rightSidebarOpen} onOpenChange={setRightSidebarOpen}>
+        <SheetContent side="right" className="w-full sm:w-96 p-0" hideCloseButton>
+          <ReportPanel
+            report={report}
+            onClose={() => setRightSidebarOpen(false)}
+            isMobile
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

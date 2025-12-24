@@ -18,7 +18,7 @@ interface BranchSelectorProps {
 export function BranchSelector({ branches, selectedBranch, onSelect, isLoading }: BranchSelectorProps) {
   return (
     <div className="space-y-2 w-full">
-      <Label htmlFor="branch-select" className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+      <Label htmlFor="branch-select" className="text-sm font-medium uppercase tracking-wider">
         Branch
       </Label>
       <Select

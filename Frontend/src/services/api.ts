@@ -55,7 +55,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
     }
 
-    // Se não autorizado, redireciona para login
     if (response.status === 401) {
       localStorage.removeItem('whatidid_token');
       localStorage.removeItem('whatidid_user');

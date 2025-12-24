@@ -71,7 +71,7 @@ export const RepoSelector = memo(function RepoSelector({
     <div className={cn("space-y-2", className)}>
       <Label
         htmlFor="repo-select"
-        className="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+        className="text-sm font-medium uppercase tracking-wider"
       >
         Repositório
         {isLoading && (

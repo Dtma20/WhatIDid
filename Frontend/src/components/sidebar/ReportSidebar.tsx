@@ -37,6 +37,7 @@ interface ReportSidebarProps {
     onDeleteReport: (id: string) => void;
     onRenameReport?: (id: string, newName: string) => void;
     onToggleFavorite?: (id: string) => void;
+    isMobile?: boolean;
 }
 
 function groupReportsByDate(reports: SavedReport[]): GroupedReports {
@@ -289,38 +290,46 @@ export function ReportSidebar({
     onDeleteReport,
     onRenameReport,
     onToggleFavorite,
+    isMobile = false,
 }: ReportSidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const groupedReports = groupReportsByDate(reports);
 
+    const effectiveCollapsed = isMobile ? false : isCollapsed;
+
     return (
         <aside
             className={cn(
-                "sticky top-0 self-start h-screen bg-card border-r flex flex-col transition-all duration-300 ease-in-out",
-                isCollapsed ? "w-16" : "w-72"
+                "flex flex-col transition-all duration-300 ease-in-out",
+                isMobile
+                    ? "w-full h-full bg-background"
+                    : "sticky top-0 self-start h-screen bg-card border-r",
+                !isMobile && (effectiveCollapsed ? "w-16" : "w-72")
             )}
             style={{ zIndex: 20 }}
         >
             <div className="flex items-center justify-between p-4 border-b">
-                {!isCollapsed && (
+                {!effectiveCollapsed && (
                     <h2 className="font-semibold text-sm">Histórico</h2>
                 )}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className={cn("h-8 w-8", isCollapsed && "mx-auto")}
-                >
-                    {isCollapsed ? (
-                        <PanelLeft className="h-4 w-4" />
-                    ) : (
-                        <PanelLeftClose className="h-4 w-4" />
-                    )}
-                </Button>
+                {!isMobile && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className={cn("h-8 w-8", effectiveCollapsed && "mx-auto")}
+                    >
+                        {effectiveCollapsed ? (
+                            <PanelLeft className="h-4 w-4" />
+                        ) : (
+                            <PanelLeftClose className="h-4 w-4" />
+                        )}
+                    </Button>
+                )}
             </div>
 
             <div className="p-2 border-b">
-                {isCollapsed ? (
+                {effectiveCollapsed ? (
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -356,7 +365,7 @@ export function ReportSidebar({
                 ) : reports.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                         <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-                        {!isCollapsed && (
+                        {!effectiveCollapsed && (
                             <p className="text-sm text-muted-foreground">
                                 Nenhum relatório ainda
                             </p>
@@ -368,7 +377,7 @@ export function ReportSidebar({
                             title="Hoje"
                             reports={groupedReports.today}
                             activeReportId={activeReportId}
-                            isCollapsed={isCollapsed}
+                            isCollapsed={effectiveCollapsed}
                             onSelectReport={onSelectReport}
                             onDeleteReport={onDeleteReport}
                             onRenameReport={onRenameReport}
@@ -378,7 +387,7 @@ export function ReportSidebar({
                             title="Ontem"
                             reports={groupedReports.yesterday}
                             activeReportId={activeReportId}
-                            isCollapsed={isCollapsed}
+                            isCollapsed={effectiveCollapsed}
                             onSelectReport={onSelectReport}
                             onDeleteReport={onDeleteReport}
                             onRenameReport={onRenameReport}
@@ -388,7 +397,7 @@ export function ReportSidebar({
                             title="Últimos 7 dias"
                             reports={groupedReports.lastWeek}
                             activeReportId={activeReportId}
-                            isCollapsed={isCollapsed}
+                            isCollapsed={effectiveCollapsed}
                             onSelectReport={onSelectReport}
                             onDeleteReport={onDeleteReport}
                             onRenameReport={onRenameReport}
@@ -398,7 +407,7 @@ export function ReportSidebar({
                             title="Mais antigos"
                             reports={groupedReports.older}
                             activeReportId={activeReportId}
-                            isCollapsed={isCollapsed}
+                            isCollapsed={effectiveCollapsed}
                             onSelectReport={onSelectReport}
                             onDeleteReport={onDeleteReport}
                             onRenameReport={onRenameReport}
