@@ -44,7 +44,8 @@ export class GithubService {
 
 
       const { data: userRepos } = await octokit.repos.listForAuthenticatedUser({
-        type: 'owner',
+        visibility: 'all',
+        affiliation: 'owner,collaborator',
         sort: 'updated',
         per_page: 100,
       });
