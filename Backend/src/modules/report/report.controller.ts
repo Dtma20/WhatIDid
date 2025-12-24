@@ -1,6 +1,7 @@
 import {
     Controller,
     Get,
+    Delete,
     Param,
     UseGuards,
     NotFoundException,
@@ -45,6 +46,20 @@ export class ReportController {
             content: report.content,
             generatedAt: report.generatedAt,
         };
+    }
+
+    @Delete(':id')
+    async deleteReport(
+        @CurrentUser() user: { sub: string },
+        @Param('id') id: string,
+    ) {
+        const deleted = await this.reportService.deleteByIdForUser(id, user.sub);
+
+        if (!deleted) {
+            throw new NotFoundException('Report not found');
+        }
+
+        return { success: true, id };
     }
 
     private extractSummary(content: unknown): string {
